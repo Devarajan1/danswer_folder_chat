@@ -160,19 +160,19 @@ services:
       options:
         max-size: "50m"
         max-file: "6"
-  web_server:
-    image: danswer/danswer-web-server:latest
-    build:
-      context: ../../web
-      dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_DISABLE_STREAMING=${NEXT_PUBLIC_DISABLE_STREAMING:-false}
-    depends_on:
-      - api_server
-    restart: always
-    environment:
-      - INTERNAL_URL=http://api_server:8080
-      - WEB_DOMAIN=${WEB_DOMAIN:-}
+  # web_server:
+  #   image: danswer/danswer-web-server:latest
+  #   build:
+  #     context: ../../web
+  #     dockerfile: Dockerfile
+  #     args:
+  #       - NEXT_PUBLIC_DISABLE_STREAMING=${NEXT_PUBLIC_DISABLE_STREAMING:-false}
+  #   depends_on:
+  #     - api_server
+  #   restart: always
+  #   environment:
+  #     - INTERNAL_URL=http://api_server:8080
+  #     - WEB_DOMAIN=${WEB_DOMAIN:-}
   relational_db:
     image: postgres:15.2-alpine
     restart: always
@@ -204,7 +204,7 @@ services:
     # if api_server / web_server are not up 
     depends_on:
       - api_server
-      - web_server
+      #- web_server
     environment:
       - DOMAIN=localhost
     ports:
