@@ -5,6 +5,8 @@ from datetime import timezone
 from pathlib import Path
 from typing import Any
 from typing import IO
+from docx import Document
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
 from danswer.configs.app_configs import INDEX_BATCH_SIZE
 from danswer.configs.constants import DocumentSource
@@ -24,25 +26,24 @@ from danswer.utils.logger import setup_logger
 
 logger = setup_logger()
 
-
 def _open_files_at_location(
     file_path: str | Path,
-) -> Generator[tuple[str, IO[Any], dict[str, Any]], Any, None]:
+) -> Generator[tuple[str, IO[Any]], Any, None]:
     extension = get_file_ext(file_path)
-    metadata: dict[str, Any] = {}
 
     if extension == ".zip":
-        for file_info, file, metadata in load_files_from_zip(
-            file_path, ignore_dirs=True
-        ):
-            yield file_info.filename, file, metadata
+        for file_info, file in load_files_from_zip(file_path, ignore_dirs=True):
+            yield file_info.filename, file
     elif extension in [".txt", ".md", ".mdx"]:
         encoding = detect_encoding(file_path)
         with open(file_path, "r", encoding=encoding, errors="replace") as file:
-            yield os.path.basename(file_path), file, metadata
+            yield os.path.basename(file_path), file
     elif extension == ".pdf":
         with open(file_path, "rb") as file:
-            yield os.path.basename(file_path), file, metadata
+            yield os.path.basename(file_path), file
+    elif extension == ".docx":  # Added handling for DOCX files
+        with open(file_path, "rb") as file:
+            yield os.path.basename(file_path), file
     else:
         logger.warning(f"Skipping file '{file_path}' with extension '{extension}'")
 
@@ -50,7 +51,7 @@ def _open_files_at_location(
 def _process_file(
     file_name: str,
     file: IO[Any],
-    metadata: dict[str, Any] = {},
+    time_updated: datetime,
     pdf_pass: str | None = None,
 ) -> list[Document]:
     extension = get_file_ext(file_name)
@@ -58,37 +59,19 @@ def _process_file(
         logger.warning(f"Skipping file '{file_name}' with extension '{extension}'")
         return []
 
-    file_metadata: dict[str, Any] = {}
+    metadata: dict[str, Any] = {}
 
     if extension == ".pdf":
         file_content_raw = read_pdf_file(
             file=file, file_name=file_name, pdf_pass=pdf_pass
         )
+    elif extension == ".docx":  # Added handling for DOCX files
+        file_content_raw = extract_docx_content(file)
     else:
-        file_content_raw, file_metadata = read_file(file)
-    file_metadata = {**metadata, **file_metadata}
-
-    time_updated = file_metadata.get("time_updated", datetime.now(timezone.utc))
-    if isinstance(time_updated, str):
-        time_updated = time_str_to_utc(time_updated)
+        file_content_raw, metadata = read_file(file)
 
     dt_str = metadata.get("doc_updated_at")
     final_time_updated = time_str_to_utc(dt_str) if dt_str else time_updated
-
-    # add tags
-    metadata_tags = {
-        k: v
-        for k, v in file_metadata.items()
-        if k
-        not in [
-            "time_updated",
-            "doc_updated_at",
-            "link",
-            "primary_owners",
-            "secondary_owners",
-            "filename",
-        ]
-    }
 
     return [
         Document(
@@ -101,11 +84,9 @@ def _process_file(
             doc_updated_at=final_time_updated,
             primary_owners=metadata.get("primary_owners"),
             secondary_owners=metadata.get("secondary_owners"),
-            # currently metadata just houses tags, other stuff like owners / updated at have dedicated fields
-            metadata=metadata_tags,
+            metadata={},
         )
     ]
-
 
 class LocalFileConnector(LoadConnector):
     def __init__(
@@ -127,12 +108,9 @@ class LocalFileConnector(LoadConnector):
             current_datetime = datetime.now(timezone.utc)
             files = _open_files_at_location(file_location)
 
-            for file_name, file, metadata in files:
-                metadata["time_updated"] = metadata.get(
-                    "time_updated", current_datetime
-                )
+            for file_name, file in files:
                 documents.extend(
-                    _process_file(file_name, file, metadata, self.pdf_pass)
+                    _process_file(file_name, file, current_datetime, self.pdf_pass)
                 )
 
                 if len(documents) >= self.batch_size:

@@ -6,9 +6,12 @@ from pathlib import Path
 from typing import Any
 from typing import IO
 
-from danswer.configs.app_configs import FILE_CONNECTOR_TMP_STORAGE_PATH
+#from danswer.configs.app_configs import FILE_CONNECTOR_TMP_STORAGE_PATH
+FILE_CONNECTOR_TMP_STORAGE_PATH = os.environ.get(
+    "FILE_CONNECTOR_TMP_STORAGE_PATH", "/home/file_connector_storage"
+)
 
-_VALID_FILE_EXTENSIONS = [".txt", ".zip", ".pdf", ".md", ".mdx"]
+_VALID_FILE_EXTENSIONS = [".txt", ".zip", ".pdf", ".md", ".mdx",".doc",".docx"]
 
 
 def get_file_ext(file_path_or_name: str | Path) -> str:
