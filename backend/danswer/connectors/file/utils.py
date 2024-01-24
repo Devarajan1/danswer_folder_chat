@@ -11,7 +11,7 @@ FILE_CONNECTOR_TMP_STORAGE_PATH = os.environ.get(
     "FILE_CONNECTOR_TMP_STORAGE_PATH", "/home/file_connector_storage"
 )
 
-_VALID_FILE_EXTENSIONS = [".txt", ".zip", ".pdf", ".md", ".mdx",".doc",".docx"]
+_VALID_FILE_EXTENSIONS = [".txt", ".zip", ".pdf", ".md", ".mdx",".docx"]
 
 
 def get_file_ext(file_path_or_name: str | Path) -> str:

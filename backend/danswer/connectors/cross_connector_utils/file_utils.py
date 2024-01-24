@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Any
 from typing import IO
 
+from docx import Document
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
+
 import chardet
 from pypdf import PdfReader
 from pypdf.errors import PdfStreamError
@@ -140,3 +143,34 @@ def read_file(
             file_content_raw += line
 
     return file_content_raw, metadata
+
+
+def extract_docx_content(file: IO[Any]):
+    doc = Document(file)
+    content = ""
+
+    for paragraph in doc.paragraphs:
+        text = paragraph.text
+        if text:
+            content += f"\n\n{paragraph.text}"
+
+    table_string = ""
+    for table in doc.tables:
+        for row in table.rows:
+            col_index = 1
+            for cell in row.cells:
+                table_string += cell.text
+                if col_index < len(row.cells):
+                    table_string += "\t"
+                col_index += 1
+            table_string += "\n"
+
+    content += f"\n\n{table_string}"
+
+    rels = doc.part.rels
+    for rel in rels:
+        if rels[rel].reltype == RT.HYPERLINK:
+            url = rels[rel]._target
+            content += f"\n{url}"
+
+    return content.strip()

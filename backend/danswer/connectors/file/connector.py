@@ -5,8 +5,7 @@ from datetime import timezone
 from pathlib import Path
 from typing import Any
 from typing import IO
-from docx import Document
-from docx.opc.constants import RELATIONSHIP_TYPE as RT
+
 
 from danswer.configs.app_configs import INDEX_BATCH_SIZE
 from danswer.configs.constants import DocumentSource
@@ -14,6 +13,7 @@ from danswer.connectors.cross_connector_utils.file_utils import detect_encoding
 from danswer.connectors.cross_connector_utils.file_utils import load_files_from_zip
 from danswer.connectors.cross_connector_utils.file_utils import read_file
 from danswer.connectors.cross_connector_utils.file_utils import read_pdf_file
+from danswer.connectors.cross_connector_utils.file_utils import extract_docx_content
 from danswer.connectors.cross_connector_utils.miscellaneous_utils import time_str_to_utc
 from danswer.connectors.file.utils import check_file_ext_is_valid
 from danswer.connectors.file.utils import get_file_ext
@@ -73,6 +73,8 @@ def _process_file(
     dt_str = metadata.get("doc_updated_at")
     final_time_updated = time_str_to_utc(dt_str) if dt_str else time_updated
 
+    
+
     return [
         Document(
             id=file_name,
@@ -87,6 +89,8 @@ def _process_file(
             metadata={},
         )
     ]
+
+
 
 class LocalFileConnector(LoadConnector):
     def __init__(
